@@ -1,37 +1,31 @@
-# EggPdf Viewer (LWJGL + OpenGL + PDFBox)
+# EggPdf Viewer
 
-A lightweight PDF viewer written in Java using OpenGL via LWJGL.  
-Currently, this project is in its very early stage, it only renders a hardcoded PNG file as a placeholder while the rendering pipeline and window system is being built.
+A lightweight pdf viewer written using [OpenGL](https://www.opengl.org/) and [Apache PdfBox](https://pdfbox.apache.org/).
 
-The goal is to build a fast, GPU-accelerated pdf viewer using Apache Pdfbox for PDF parsing and OpenGL for display.
+The goal of this project is to make a lightweight feature rich and high performant pdf viewer 
+by taking advantage of GPU-acceleration.
 
 ---
 
 ## Current Status
 
 ### Implemented
-- OpenGL renderer basic setup using LWJGL
-- Basic window creation
-- Texture loading and rendering
-- Rendering a hardcoded PNG in a 2D viewport
+- Basic OpenGL setup
+- Basic PdfBox setup
+- Rendering hardcoded pdf, (loading entire pdf into memory before rendering)
 
 ### Planned
-- PDF loading using PDFBox
-- Rendering PDF pages to textures
-- Zooming and panning
-- Multi-page support
-- Text selection
-- Search functionality
-- Smooth scrolling
-- GPU-accelerated rendering pipeline
-- Caching system for rendered pages
+- A UI
+- Annotations, search, selection, any other basic features
+- Multiple pdf support (via easy to use ui)
+- Optimizations of the graphics pipeline
 
 ---
 
-## Libraries used
+## Libraries
 
 - LWJGL (OpenGL)
-- Apache PDFBox *(planned)*
+- Apache PDFBox
 
 ---
 
@@ -39,30 +33,31 @@ The goal is to build a fast, GPU-accelerated pdf viewer using Apache Pdfbox for 
 
 ### Requirements
 
-- Java 17+
-- A build tool like Gradle or Maven
-- OpenGL-compatible GPU
+- Java (17+)
+- OpenGL supporting GPU
+- Gradle or Maven
 
-### Clone the Repository
+### Clone Repository
 
 ```bash
 git clone <this-repo>
 cd <project-name>
 ```
 
-### Run
+### Compile and run
 
 ```bash
 ./gradlew run
 ```
-
-or run the main class from your IDE.
+### Usage
+- Use W, S for scrolling the pdf.
+- Use Up arrow, down arrow for zooming in and out.
 
 ---
 
 ## Screenshots
 
-*to be added*
+![screenshot1.png](screenshots/screenshot1.png)
 
 ---
 
@@ -75,9 +70,9 @@ This project exists mainly for:
 
 ---
 
-## Disaclaimer
+## Disclaimer
 
-This is just an initial commit and codebase is experimental
+Project is in early stages and may not work as expected.
 
 ---
 
