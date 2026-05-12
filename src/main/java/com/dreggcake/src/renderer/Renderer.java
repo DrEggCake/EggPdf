@@ -3,6 +3,7 @@ package com.dreggcake.src.renderer;
 import com.dreggcake.src.app.Window;
 import com.dreggcake.src.pdf.core.PDFDocument;
 import com.dreggcake.src.pdf.core.PDFLoader;
+import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.*;
 import org.lwjgl.stb.STBImage;
@@ -14,37 +15,45 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Renderer {
 
     Shader shader;
-    int tex;
     int VAO;
     int VBO;
 
-    public void start(Window win){
+    List<Page> pages = new ArrayList<>();
+    Camera camera = new Camera();
+
+    Matrix4f projection = new Matrix4f();
+    Matrix4f model = new Matrix4f();
+    Matrix4f view = new Matrix4f();
+
+    public void start(Window win) {
 
         init(win);
         run(win.window);
 
     }
 
-    public void init(Window win){
+    public void init(Window win) {
         float[] vertices = {
                 // positions          // texture coords
                 // top left
-                -0.5f,  0.5f, 0.0f,   0.0f, 1.0f,
+                -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
                 // bottom right
-                0.5f, -0.5f, 0.0f,   1.0f, 0.0f,
+                0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
                 // top right
-                0.5f,  0.5f, 0.0f,   1.0f, 1.0f,
+                0.5f, 0.5f, 0.0f, 1.0f, 1.0f,
 
                 // top left
-                -0.5f,  0.5f, 0.0f,   0.0f, 1.0f,
+                -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
                 // bottom left
-                -0.5f, -0.5f, 0.0f,   0.0f, 0.0f,
+                -0.5f, -0.5f, 0.0f, 0.0f, 0.0f,
                 // bottom right
-                0.5f, -0.5f, 0.0f,   1.0f, 0.0f,
+                0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
         };
 
         VBO = GL15.glGenBuffers();
@@ -99,17 +108,35 @@ public class Renderer {
         shader.use();
         shader.setInt("tex", 0);
 
-        PDFDocument document = PDFLoader.loadDocumentFromResource("/pdf/test.pdf");
-        BufferedImage image = document.renderPage(0, 1.0f);
+        projection.identity().ortho(
+                -1f, 1f,
+                -1f, 1f,
+                -1f, 1f
+        );
 
-        tex = loadTexture(image);
+        PDFDocument document = PDFLoader.loadDocumentFromResource("/pdf/test.pdf");
+
+        for (int i = 0; i < document.getPageCount(); i++) {
+            BufferedImage image = document.renderPage(i, 1.5f);
+
+            Page page = new Page();
+            page.texture = loadTexture(image);
+
+            page.x = 0;
+            page.y = -i * 1.8f;
+
+            pages.add(page);
+        }
 
 
     }
 
     public void run(long window) {
         while (!GLFW.glfwWindowShouldClose(window)) {
+            input(window);
+
             draw();
+
             GLFW.glfwSwapBuffers(window);
             GLFW.glfwPollEvents();
         }
@@ -120,16 +147,54 @@ public class Renderer {
         GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
 
         shader.use();
+        shader.setMat4("projection", projection);
+        shader.setMat4("view", camera.getView());
+
 
         GL30.glBindVertexArray(VAO);
 
-        GL13.glActiveTexture(GL13.GL_TEXTURE0);
-        GL13.glBindTexture(GL11.GL_TEXTURE_2D, tex);
+        for (Page page : pages) {
+            GL13.glActiveTexture(GL13.GL_TEXTURE0);
+            GL13.glBindTexture(GL11.GL_TEXTURE_2D, page.texture);
 
+            model.identity()
+                    .translate(page.x, page.y, 0);
 
-        GL11.glDrawArrays(GL11.GL_TRIANGLES, 0,
-                6);
+            shader.setMat4("model", model);
 
+            GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, 6);
+
+        }
+
+    }
+
+    private void input(long window) {
+
+        // scroll
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W)
+                == GLFW.GLFW_PRESS) {
+            camera.y -= 0.05f;
+        }
+
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S)
+                == GLFW.GLFW_PRESS) {
+            camera.y += 0.05f;
+        }
+
+        // zoom
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_UP)
+                == GLFW.GLFW_PRESS) {
+            camera.zoom += 0.01f;
+        }
+
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_DOWN)
+                == GLFW.GLFW_PRESS) {
+            camera.zoom -= 0.01f;
+        }
+
+        // clamp zoom
+        camera.zoom = Math.max(0.2f,
+                Math.min(3.0f, camera.zoom));
     }
 
 
@@ -215,11 +280,9 @@ public class Renderer {
 
             if (channels.get(0) == 3) {
                 format = GL11.GL_RGB;
-            }
-            else if (channels.get(0) == 4) {
+            } else if (channels.get(0) == 4) {
                 format = GL11.GL_RGBA;
-            }
-            else {
+            } else {
                 throw new RuntimeException(
                         "Unsupported image format"
                 );
@@ -340,6 +403,13 @@ public class Renderer {
         MemoryUtil.memFree(buffer);
 
         return texture;
+    }
+
+
+    class Page {
+        int texture;
+        float x, y;
+        float width, height;
     }
 
 }

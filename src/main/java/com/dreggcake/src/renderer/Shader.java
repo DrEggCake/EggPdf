@@ -1,12 +1,15 @@
 package com.dreggcake.src.renderer;
 
+import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL32;
 import org.lwjgl.opengl.GL40;
 import org.lwjgl.opengl.GL43;
+import org.lwjgl.system.MemoryStack;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.FloatBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -137,6 +140,27 @@ public class Shader {
                 getUniformLocation(name),
                 value
         );
+    }
+    public void setMat4(String name, Matrix4f matrix) {
+
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+
+            FloatBuffer fb = stack.mallocFloat(16);
+
+            matrix.get(fb);
+
+            int location =
+                    GL20.glGetUniformLocation(
+                            ID,
+                            name
+                    );
+
+            GL20.glUniformMatrix4fv(
+                    location,
+                    false,
+                    fb
+            );
+        }
     }
 
     private int getUniformLocation(String name) {
