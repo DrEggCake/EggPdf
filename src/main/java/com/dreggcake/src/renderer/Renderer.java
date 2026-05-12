@@ -1,12 +1,15 @@
 package com.dreggcake.src.renderer;
 
 import com.dreggcake.src.app.Window;
+import com.dreggcake.src.pdf.core.PDFDocument;
+import com.dreggcake.src.pdf.core.PDFLoader;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.*;
 import org.lwjgl.stb.STBImage;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
+import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
@@ -96,7 +99,10 @@ public class Renderer {
         shader.use();
         shader.setInt("tex", 0);
 
-        tex = loadTexture("/textures/img.png");
+        PDFDocument document = PDFLoader.loadDocumentFromResource("/pdf/test.pdf");
+        BufferedImage image = document.renderPage(0, 1.0f);
+
+        tex = loadTexture(image);
 
 
     }
@@ -243,6 +249,95 @@ public class Renderer {
                     e
             );
         }
+
+        return texture;
+    }
+
+    // overloaded ( for now ) because we already have the image in BufferedImage
+    private int loadTexture(BufferedImage image) {
+
+        int width = image.getWidth();
+        int height = image.getHeight();
+
+        int[] pixels = new int[width * height];
+
+        image.getRGB(
+                0,
+                0,
+                width,
+                height,
+                pixels,
+                0,
+                width
+        );
+
+        ByteBuffer buffer =
+                MemoryUtil.memAlloc(width * height * 4);
+
+        // Convert ARGB -> RGBA
+        for (int y = height - 1; y >= 0; y--) {
+
+            for (int x = 0; x < width; x++) {
+
+                int pixel =
+                        pixels[y * width + x];
+
+                buffer.put(
+                        (byte) ((pixel >> 16) & 0xFF)
+                ); // R
+
+                buffer.put(
+                        (byte) ((pixel >> 8) & 0xFF)
+                ); // G
+
+                buffer.put(
+                        (byte) (pixel & 0xFF)
+                ); // B
+
+                buffer.put(
+                        (byte) ((pixel >> 24) & 0xFF)
+                ); // A
+            }
+        }
+
+        buffer.flip();
+
+        int texture = GL11.glGenTextures();
+
+        GL11.glBindTexture(
+                GL11.GL_TEXTURE_2D,
+                texture
+        );
+
+        GL11.glTexParameteri(
+                GL11.GL_TEXTURE_2D,
+                GL11.GL_TEXTURE_MIN_FILTER,
+                GL11.GL_LINEAR
+        );
+
+        GL11.glTexParameteri(
+                GL11.GL_TEXTURE_2D,
+                GL11.GL_TEXTURE_MAG_FILTER,
+                GL11.GL_LINEAR
+        );
+
+        GL11.glTexImage2D(
+                GL11.GL_TEXTURE_2D,
+                0,
+                GL11.GL_RGBA8,
+                width,
+                height,
+                0,
+                GL11.GL_RGBA,
+                GL11.GL_UNSIGNED_BYTE,
+                buffer
+        );
+
+        GL30.glGenerateMipmap(
+                GL11.GL_TEXTURE_2D
+        );
+
+        MemoryUtil.memFree(buffer);
 
         return texture;
     }
