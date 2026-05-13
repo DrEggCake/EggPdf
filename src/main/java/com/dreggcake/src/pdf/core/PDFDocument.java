@@ -1,5 +1,6 @@
 package com.dreggcake.src.pdf.core;
 
+import com.dreggcake.src.exceptions.PdfRenderException;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
@@ -33,7 +34,7 @@ public class PDFDocument implements AutoCloseable {
             );
 
         } catch (IOException e) {
-            throw new RuntimeException(
+            throw new PdfRenderException(
                     "Failed to render page: " + pageIndex,
                     e
             );
