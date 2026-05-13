@@ -4,8 +4,8 @@ import org.joml.Matrix4f;
 
 public class Camera {
 
-    float y = 0.0f;
-    float zoom = 1.0f;
+    public float y = 0.0f;
+    public float zoom = 1.0f;
 
     public Matrix4f getView(){
 

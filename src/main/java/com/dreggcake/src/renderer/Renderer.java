@@ -139,7 +139,7 @@ public class Renderer {
 
         GL30.glBindVertexArray(VAO);
 
-        for (RenderPage page : pageManager.getPages()) {
+        for (RenderPage page : pageManager.getVisiblePages(camera)) {
 
             if (!page.loaded) {
                 BufferedImage image =
