@@ -2,6 +2,7 @@ package com.dreggcake.src.pdf.core;
 
 import com.dreggcake.src.exceptions.PdfRenderException;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
 import java.awt.image.BufferedImage;

@@ -3,6 +3,7 @@ package com.dreggcake.src.renderer;
 import com.dreggcake.src.app.Window;
 import com.dreggcake.src.pdf.core.PDFDocument;
 import com.dreggcake.src.pdf.core.PDFLoader;
+import com.dreggcake.src.pdf.core.PageManager;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.*;
@@ -15,8 +16,6 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
-import java.util.ArrayList;
-import java.util.List;
 
 public class Renderer {
 
@@ -24,21 +23,20 @@ public class Renderer {
     int VAO;
     int VBO;
 
-    List<Page> pages = new ArrayList<>();
+    PageManager pageManager;
     Camera camera = new Camera();
 
     Matrix4f projection = new Matrix4f();
     Matrix4f model = new Matrix4f();
-    Matrix4f view = new Matrix4f();
 
     public void start(Window win) {
 
-        init(win);
+        init();
         run(win.window);
 
     }
 
-    public void init(Window win) {
+    public void init() {
         float[] vertices = {
                 // positions          // texture coords
                 // top left
@@ -115,19 +113,7 @@ public class Renderer {
         );
 
         PDFDocument document = PDFLoader.loadDocumentFromResource("/pdf/test.pdf");
-
-        for (int i = 0; i < document.getPageCount(); i++) {
-            BufferedImage image = document.renderPage(i, 1.5f);
-
-            Page page = new Page();
-            page.texture = loadTexture(image);
-
-            page.x = 0;
-            page.y = -i * 1.8f;
-
-            pages.add(page);
-        }
-
+        pageManager = new PageManager(document);
 
     }
 
@@ -153,7 +139,19 @@ public class Renderer {
 
         GL30.glBindVertexArray(VAO);
 
-        for (Page page : pages) {
+        for (RenderPage page : pageManager.getPages()) {
+
+            if (!page.loaded) {
+                BufferedImage image =
+                        pageManager
+                        .getDocument()
+                        .renderPage(page.getPage().getIndex(),
+                                1.5f);
+
+                page.texture = loadTexture(image);
+                page.loaded = true;
+            }
+
             GL13.glActiveTexture(GL13.GL_TEXTURE0);
             GL13.glBindTexture(GL11.GL_TEXTURE_2D, page.texture);
 
@@ -404,12 +402,4 @@ public class Renderer {
 
         return texture;
     }
-
-
-    class Page {
-        int texture;
-        float x, y;
-        float width, height;
-    }
-
 }

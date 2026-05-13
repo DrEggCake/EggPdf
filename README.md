@@ -1,9 +1,9 @@
 # EggPdf Viewer
 
-A lightweight pdf viewer written using [OpenGL](https://www.opengl.org/) and [Apache PdfBox](https://pdfbox.apache.org/).
+A lightweight PDF viewer written using [OpenGL](https://www.opengl.org/) and [Apache PdfBox](https://pdfbox.apache.org/).
 
-The goal of this project is to make a lightweight feature rich and high performant pdf viewer 
-by taking advantage of GPU-acceleration.
+The goal of this project is to make a lightweight feature rich and high-performance PDF viewer 
+by taking advantage of GPU acceleration.
 
 ---
 
@@ -12,12 +12,12 @@ by taking advantage of GPU-acceleration.
 ### Implemented
 - Basic OpenGL setup
 - Basic PdfBox setup
-- Rendering hardcoded pdf, (loading entire pdf into memory before rendering)
+- Rendering hardcoded PDF file, (loading the entire PDF into memory before rendering)
 
 ### Planned
 - A UI
 - Annotations, search, selection, any other basic features
-- Multiple pdf support (via easy to use ui)
+- Multiple PDF support (via easy to use ui)
 - Optimizations of the graphics pipeline
 
 ---
@@ -50,8 +50,8 @@ cd <project-name>
 ./gradlew run
 ```
 ### Usage
-- Use W, S for scrolling the pdf.
-- Use Up arrow, down arrow for zooming in and out.
+- Use W, S for scrolling the PDF.
+- Use Up and Down arrow keys to zoom in and out.
 
 ---
 
@@ -66,7 +66,7 @@ cd <project-name>
 This project exists mainly for:
 - learning OpenGL rendering in Java
 - an experiment in GPU-accelerated PDF rendering
-- an lightweight alternative to ui heavy pdf viewers
+- a lightweight alternative to UI heavy PDF viewers
 
 ---
 
