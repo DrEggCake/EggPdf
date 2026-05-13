@@ -10,7 +10,7 @@ public class Camera {
     public Matrix4f getView(){
 
         return new Matrix4f()
-                .translate(0, y, 0)
-                .scale(zoom);
+                .scale(zoom)
+                .translate(0, -y, 0);
     }
 }

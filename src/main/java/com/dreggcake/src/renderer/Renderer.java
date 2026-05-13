@@ -173,12 +173,12 @@ public class Renderer {
         // scroll
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W)
                 == GLFW.GLFW_PRESS) {
-            camera.y -= 0.05f;
+            camera.y += 0.05f;
         }
 
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S)
                 == GLFW.GLFW_PRESS) {
-            camera.y += 0.05f;
+            camera.y -= 0.05f;
         }
 
         // zoom
