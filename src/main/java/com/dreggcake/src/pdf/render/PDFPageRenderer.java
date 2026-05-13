@@ -1,5 +1,6 @@
 package com.dreggcake.src.pdf.render;
 
+import com.dreggcake.src.exceptions.PdfRenderException;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
@@ -15,7 +16,7 @@ public class PDFPageRenderer {
 
             return renderer.renderImage(pageIndex, scale);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to render page", e);
+            throw new PdfRenderException("Failed to render page", e);
         }
 
     }
