@@ -49,13 +49,14 @@ public class PageManager {
     public List<RenderPage> getVisiblePages(Camera camera) {
         List<RenderPage> visiblePages = new ArrayList<>();
 
-        float viewTop = (camera.y + 1.0f) / camera.zoom;
-        float viewBottom = (camera.y - 1.0f) / camera.zoom;
+        float viewTop = camera.y + (1.0f / camera.zoom);
+        float viewBottom = camera.y - (1.0f / camera.zoom);
 
         for (RenderPage page : pages) {
+            float scaledHeight = page.getPage().getHeight() * SCALE;
 
-            float pageTop = page.y + page.getPage().getHeight();
-            float pageBottom = page.y - page.getPage().getHeight();
+            float pageTop = page.y + scaledHeight;
+            float pageBottom = page.y - scaledHeight;
 
             boolean isVisible = !(pageBottom > viewTop || pageTop < viewBottom);
 
