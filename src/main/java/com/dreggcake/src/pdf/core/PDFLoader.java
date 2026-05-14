@@ -26,14 +26,10 @@ public class PDFLoader {
 
 
     }
-    public static PDFDocument loadDocumentFromResource(
-            String resourcePath
-    ) {
+    public static PDFDocument loadDocumentFromResource(String resourcePath) {
 
         try {
-
-            InputStream stream =
-                    PDFLoader.class.getResourceAsStream(
+            InputStream stream = PDFLoader.class.getResourceAsStream(
                             resourcePath
                     );
 
