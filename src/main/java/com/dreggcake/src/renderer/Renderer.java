@@ -260,10 +260,8 @@ public class Renderer {
                 );
             }
 
-            // Read resource into byte[]
             byte[] bytes = is.readAllBytes();
 
-            // Convert to ByteBuffer
             ByteBuffer imageBuffer =
                     MemoryUtil.memAlloc(bytes.length);
 
