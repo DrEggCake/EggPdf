@@ -12,6 +12,7 @@ public class PageManager {
 
     private final PDFDocument document;
     private final float SCALE = 0.0025f;
+    private final float PAGE_SPACING = 0.05f;
 
 
     List<RenderPage> pages = new ArrayList<>();
@@ -37,7 +38,9 @@ public class PageManager {
             renderPage.x = 0;
             renderPage.y = currentY;
 
-            currentY -= renderPage.getPage().getHeight() * SCALE;
+            float scaledHeight = renderPage.getPage().getHeight() * SCALE;
+
+            currentY -= scaledHeight + PAGE_SPACING; // scale down the page, then add a constant amount of gap between two pages
 
             pages.add(renderPage);
         }
