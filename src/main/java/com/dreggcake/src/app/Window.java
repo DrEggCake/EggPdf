@@ -30,4 +30,9 @@ public class Window {
         window = GLFW.glfwCreateWindow(width, height, "EggPdf", 0, 0);
         GLFW.glfwSetWindowPos(window, posX, posY);
     }
+
+
+    public void setTitle(String title) {
+        GLFW.glfwSetWindowTitle(window, title);
+    }
 }

@@ -11,7 +11,9 @@ import org.lwjgl.stb.STBImage;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
+import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
@@ -114,9 +116,20 @@ public class Renderer {
                 -1f, 1f
         );
 
-        PDFDocument document = PDFLoader.loadDocumentFromResource("/pdf/test.pdf");
-        pageManager = new PageManager(document);
+        // will be removed after basic ui is implemented
+        File pdfFile = choosePDFFile();
+        PDFDocument document;
 
+        if (pdfFile == null) {
+            document = PDFLoader.loadDocumentFromResource("/pdf/test.pdf");
+            window.setTitle("EggPDF - No PDF selected - Displaying Sample PDF");
+        } else {
+            document = PDFLoader.loadDocument(pdfFile.getAbsolutePath());
+            window.setTitle("EggPDF - " + pdfFile.getName());
+        }
+
+
+        pageManager = new PageManager(document);
     }
 
     public void run(long window) {
@@ -408,4 +421,28 @@ public class Renderer {
 
         return texture;
     }
+
+
+    // a VERY temporary solution to load PDFs other than the sample pdf (in resources/pdf/test.pdf)
+    private File choosePDFFile() {
+        FileDialog dialog = new FileDialog(
+                (Frame) null, "Select a PDF File", FileDialog.LOAD
+        );
+
+        dialog.setFile("*.pdf");
+        dialog.setVisible(true);
+
+        String directory = dialog.getDirectory();
+        String file = dialog.getFile();
+
+        dialog.dispose();
+
+        if (directory == null || file == null) {
+            return null;
+        }
+        return new File(directory, file);
+
+    }
+
+
 }
