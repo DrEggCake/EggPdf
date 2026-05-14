@@ -29,14 +29,16 @@ public class Renderer {
     Matrix4f projection = new Matrix4f();
     Matrix4f model = new Matrix4f();
 
+    float SCALE = 0.0025f;
+
     public void start(Window win) {
 
-        init();
+        init(win);
         run(win.window);
 
     }
 
-    public void init() {
+    public void init(Window window) {
         float[] vertices = {
                 // positions          // texture coords
                 // top left
@@ -107,7 +109,7 @@ public class Renderer {
         shader.setInt("tex", 0);
 
         projection.identity().ortho(
-                -1f, 1f,
+                -window.aspectRatio, window.aspectRatio,
                 -1f, 1f,
                 -1f, 1f
         );
@@ -144,9 +146,9 @@ public class Renderer {
             if (!page.loaded) {
                 BufferedImage image =
                         pageManager
-                        .getDocument()
-                        .renderPage(page.getPage().getIndex(),
-                                1.5f);
+                                .getDocument()
+                                .renderPage(page.getPage().getIndex(),
+                                        1.5f);
 
                 page.texture = loadTexture(image);
                 page.loaded = true;
@@ -155,8 +157,12 @@ public class Renderer {
             GL13.glActiveTexture(GL13.GL_TEXTURE0);
             GL13.glBindTexture(GL11.GL_TEXTURE_2D, page.texture);
 
+            float width = page.getPage().getWidth() * SCALE;
+            float height = page.getPage().getHeight() * SCALE;
+
             model.identity()
-                    .translate(page.x, page.y, 0);
+                    .translate(page.x, page.y, 0)
+                    .scale(width, height, 1.0f);
 
             shader.setMat4("model", model);
 

@@ -11,6 +11,7 @@ import java.util.List;
 public class PageManager {
 
     private final PDFDocument document;
+    private final float SCALE = 0.0025f;
 
 
     List<RenderPage> pages = new ArrayList<>();
@@ -36,7 +37,7 @@ public class PageManager {
             renderPage.x = 0;
             renderPage.y = currentY;
 
-            currentY -= 1.8f;
+            currentY -= renderPage.getPage().getHeight() * SCALE;
 
             pages.add(renderPage);
         }
@@ -45,18 +46,17 @@ public class PageManager {
     public List<RenderPage> getVisiblePages(Camera camera) {
         List<RenderPage> visiblePages = new ArrayList<>();
 
-        float viewTop = camera.y + camera.zoom;
-        float viewBottom = camera.y - camera.zoom;
+        float viewTop = (camera.y + 1.0f) / camera.zoom;
+        float viewBottom = (camera.y - 1.0f) / camera.zoom;
 
         for (RenderPage page : pages) {
 
-            // 0.7 just the temp hard page size for now
-            float pageTop = page.y + 0.7f;
-            float pageBottom = page.y - 0.7f;
+            float pageTop = page.y + page.getPage().getHeight();
+            float pageBottom = page.y - page.getPage().getHeight();
 
             boolean isVisible = !(pageBottom > viewTop || pageTop < viewBottom);
 
-            if(isVisible){
+            if (isVisible) {
                 visiblePages.add(page);
             }
         }
