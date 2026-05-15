@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'application'
 }
 
 project.ext.lwjglVersion = "3.4.1"
@@ -103,6 +104,10 @@ dependencies {
 
     implementation 'org.apache.pdfbox:pdfbox:3.0.5'
 
+}
+
+application {
+    mainClass = 'com.dreggcake.src.Main'
 }
 
 test {
