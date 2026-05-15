@@ -13,11 +13,11 @@ by taking advantage of GPU acceleration.
 - Basic OpenGL setup
 - Basic PDFBox setup
 - Basic navigation (Scrolling, Zooming)
-- Rendering hardcoded PDF file
+- Dyanmic PDF loading through temporary AWT File Dialog
 - Visible page loading (loaded pages are not erased from memory)
 
 ### Planned
-- A UI
+- A custom OpenGL-based UI
 - Annotations, search, selection, any other basic features
 - Multiple PDF support (via easy-to-use UI)
 - Optimizations of the graphics pipeline
