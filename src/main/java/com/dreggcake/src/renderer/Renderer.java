@@ -146,6 +146,7 @@ public class Renderer {
             GLFW.glfwSwapBuffers(window);
             GLFW.glfwPollEvents();
         }
+        threadPool.shutdown();
     }
 
     private void draw() {
