@@ -2,9 +2,14 @@ package com.dreggcake.src.renderer;
 
 import com.dreggcake.src.pdf.model.PDFPage;
 
+import java.awt.image.BufferedImage;
+import java.util.concurrent.CompletableFuture;
+
 public class RenderPage {
 
     private final PDFPage page;
+
+    public CompletableFuture<BufferedImage> future;
 
     public float x;
     public float y;

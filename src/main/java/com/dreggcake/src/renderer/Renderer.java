@@ -18,6 +18,9 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Renderer {
 
@@ -30,8 +33,10 @@ public class Renderer {
 
     Matrix4f projection = new Matrix4f();
     Matrix4f model = new Matrix4f();
-
     float SCALE = 0.0025f;
+
+    ExecutorService threadPool = Executors.newFixedThreadPool(2);
+
 
     public void start(Window win) {
 
@@ -155,17 +160,22 @@ public class Renderer {
         GL30.glBindVertexArray(VAO);
 
         for (RenderPage page : pageManager.getVisiblePages(camera)) {
+            if (!page.loaded && page.future == null) {
+                page.future = CompletableFuture.supplyAsync(() ->
+                                pageManager.getDocument().renderPage(
+                                        page.getPage().getIndex(), 1.5f),
+                        threadPool
+                );
+            }
 
-            if (!page.loaded) {
-                BufferedImage image =
-                        pageManager
-                                .getDocument()
-                                .renderPage(page.getPage().getIndex(),
-                                        1.5f);
-
+            if (!page.loaded && page.future.isDone()) {
+                BufferedImage image = page.future.join();
                 page.texture = loadTexture(image);
                 page.loaded = true;
+                page.future = null;
             }
+
+            if (!page.loaded) continue;
 
             GL13.glActiveTexture(GL13.GL_TEXTURE0);
             GL13.glBindTexture(GL11.GL_TEXTURE_2D, page.texture);
