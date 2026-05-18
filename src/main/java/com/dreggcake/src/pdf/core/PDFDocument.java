@@ -22,13 +22,8 @@ public class PDFDocument implements AutoCloseable {
         return document.getNumberOfPages();
     }
 
-    public BufferedImage renderPage(
-            int pageIndex,
-            float zoom
-    ) {
-
+    public BufferedImage renderPage(int pageIndex, float zoom) {
         try {
-
             return renderer.renderImage(
                     pageIndex,
                     zoom
