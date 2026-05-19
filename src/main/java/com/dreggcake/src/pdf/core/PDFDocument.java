@@ -2,7 +2,6 @@ package com.dreggcake.src.pdf.core;
 
 import com.dreggcake.src.exceptions.PdfRenderException;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
 import java.awt.image.BufferedImage;
@@ -11,11 +10,9 @@ import java.io.IOException;
 public class PDFDocument implements AutoCloseable {
 
     private final PDDocument document;
-    private final PDFRenderer renderer;
 
     public PDFDocument(PDDocument document) {
         this.document = document;
-        this.renderer = new PDFRenderer(document);
     }
 
     public int getPageCount() {
@@ -24,6 +21,7 @@ public class PDFDocument implements AutoCloseable {
 
     public BufferedImage renderPage(int pageIndex, float zoom) {
         try {
+            PDFRenderer renderer = new PDFRenderer(document);
             return renderer.renderImage(
                     pageIndex,
                     zoom
