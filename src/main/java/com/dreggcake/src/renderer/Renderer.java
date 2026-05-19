@@ -35,7 +35,8 @@ public class Renderer {
     Matrix4f model = new Matrix4f();
     float SCALE = 0.0025f;
 
-    ExecutorService threadPool = Executors.newFixedThreadPool(2);
+    int cores = Runtime.getRuntime().availableProcessors();
+    ExecutorService threadPool = Executors.newFixedThreadPool(Math.max(1, cores - 1));
 
 
     public void start(Window win) {
