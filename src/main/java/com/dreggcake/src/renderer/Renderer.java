@@ -38,6 +38,8 @@ public class Renderer {
     int cores = Runtime.getRuntime().availableProcessors();
     ExecutorService threadPool = Executors.newFixedThreadPool(Math.max(1, cores - 1));
 
+    ByteBuffer textureBuffer;
+
 
     public void start(Window win) {
 
@@ -147,6 +149,7 @@ public class Renderer {
             GLFW.glfwSwapBuffers(window);
             GLFW.glfwPollEvents();
         }
+        if (textureBuffer != null) MemoryUtil.memFree(textureBuffer);
         threadPool.shutdown();
     }
 
@@ -161,6 +164,9 @@ public class Renderer {
 
         GL30.glBindVertexArray(VAO);
 
+        int uploadsThisFrame = 0;
+        int maxUploads = 1;
+
         for (RenderPage page : pageManager.getVisiblePages(camera)) {
             if (!page.loaded && page.future == null) {
                 page.future = CompletableFuture.supplyAsync(() ->
@@ -170,11 +176,13 @@ public class Renderer {
                 );
             }
 
-            if (!page.loaded && page.future.isDone()) {
+            if (!page.loaded && page.future.isDone() && uploadsThisFrame < maxUploads) {
                 BufferedImage image = page.future.join();
                 page.texture = loadTexture(image);
                 page.loaded = true;
                 page.future = null;
+
+                uploadsThisFrame++;
             }
 
             if (!page.loaded) continue;
@@ -361,8 +369,20 @@ public class Renderer {
                 width
         );
 
-        ByteBuffer buffer =
-                MemoryUtil.memAlloc(width * height * 4);
+        int requiredSize = width * height * 4;
+
+        if (textureBuffer == null || textureBuffer.capacity() < requiredSize) {
+
+            if (textureBuffer != null) {
+                MemoryUtil.memFree(textureBuffer);
+            }
+
+            textureBuffer = MemoryUtil.memAlloc(requiredSize);
+
+        }
+        textureBuffer.clear();
+
+        ByteBuffer buffer = textureBuffer;
 
         // Convert ARGB -> RGBA
         for (int y = height - 1; y >= 0; y--) {
@@ -411,6 +431,7 @@ public class Renderer {
                 GL11.GL_LINEAR
         );
 
+        GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 1);
         GL11.glTexImage2D(
                 GL11.GL_TEXTURE_2D,
                 0,
@@ -422,12 +443,6 @@ public class Renderer {
                 GL11.GL_UNSIGNED_BYTE,
                 buffer
         );
-
-        GL30.glGenerateMipmap(
-                GL11.GL_TEXTURE_2D
-        );
-
-        MemoryUtil.memFree(buffer);
 
         return texture;
     }
