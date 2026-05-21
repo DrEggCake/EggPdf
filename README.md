@@ -20,6 +20,7 @@ by taking advantage of GPU acceleration.
 - A custom OpenGL-based UI
 - Annotations, search, selection, any other basic features
 - Multiple PDF support (via easy-to-use UI)
+- LRU cache to stop the ram exploding
 - Optimizations of the graphics pipeline
 
 ---
