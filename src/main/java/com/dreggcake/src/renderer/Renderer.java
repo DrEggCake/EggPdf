@@ -7,18 +7,11 @@ import com.dreggcake.src.pdf.core.PageManager;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.*;
-import org.lwjgl.stb.STBImage;
-import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
 import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -29,6 +22,7 @@ public class Renderer {
     int VBO;
 
     PageManager pageManager;
+    PageCache pageCache;
     Camera camera = new Camera();
 
     Matrix4f projection = new Matrix4f();
@@ -38,13 +32,11 @@ public class Renderer {
     int cores = Runtime.getRuntime().availableProcessors();
     ExecutorService threadPool = Executors.newFixedThreadPool(Math.max(1, cores - 1));
 
-    ByteBuffer textureBuffer;
-
 
     public void start(Window win) {
 
         init(win);
-        run(win.window);
+        run(win);
 
     }
 
@@ -63,8 +55,7 @@ public class Renderer {
                 // bottom left
                 -0.5f, -0.5f, 0.0f, 0.0f, 0.0f,
                 // bottom right
-                0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-        };
+                0.5f, -0.5f, 0.0f, 1.0f, 0.0f,};
 
         VBO = GL15.glGenBuffers();
         VAO = GL30.glGenVertexArrays();
@@ -79,50 +70,21 @@ public class Renderer {
 
         int stride = 5 * Float.BYTES;
 
-        GL20.glVertexAttribPointer(
-                0,
-                3,
-                GL11.GL_FLOAT,
-                false,
-                stride,
-                0
-        );
+        GL20.glVertexAttribPointer(0, 3, GL11.GL_FLOAT, false, stride, 0);
         GL20.glEnableVertexAttribArray(0);
 
 
-        GL20.glVertexAttribPointer(
-                1,
-                2,
-                GL11.GL_FLOAT,
-                false,
-                stride,
-                3 * Float.BYTES
-        );
+        GL20.glVertexAttribPointer(1, 2, GL11.GL_FLOAT, false, stride, 3 * Float.BYTES);
         GL20.glEnableVertexAttribArray(1);
 
         GL30.glBindVertexArray(0);
 
         MemoryUtil.memFree(vertexBuffer);
 
-        shader = new Shader(
-                new Shader.ShaderSource(
-                        Shader.ShaderType.VERTEX,
-                        "/shaders/shader.vert"
-                ),
-                new Shader.ShaderSource(
-                        Shader.ShaderType.FRAGMENT,
-                        "/shaders/shader.frag"
-                )
-        );
+        shader = new Shader(new Shader.ShaderSource(Shader.ShaderType.VERTEX, "/shaders/shader.vert"), new Shader.ShaderSource(Shader.ShaderType.FRAGMENT, "/shaders/shader.frag"));
 
         shader.use();
         shader.setInt("tex", 0);
-
-        projection.identity().ortho(
-                -window.aspectRatio, window.aspectRatio,
-                -1f, 1f,
-                -1f, 1f
-        );
 
         // will be removed after basic ui is implemented
         File pdfFile = choosePDFFile();
@@ -138,19 +100,26 @@ public class Renderer {
 
 
         pageManager = new PageManager(document);
+        pageCache = new PageCache(pageManager, threadPool);
     }
 
-    public void run(long window) {
-        while (!GLFW.glfwWindowShouldClose(window)) {
-            input(window);
+    public void run(Window win) {
+        while (!GLFW.glfwWindowShouldClose(win.window)) {
+            input(win.window);
+
+            // Every iteration to handle window resizes
+            projection.identity().ortho(
+                    -win.aspectRatio,
+                    win.aspectRatio,
+                    -1f, 1f,
+                    -1f, 1f);
 
             draw();
 
-            GLFW.glfwSwapBuffers(window);
+            GLFW.glfwSwapBuffers(win.window);
             GLFW.glfwPollEvents();
         }
-        if (textureBuffer != null) MemoryUtil.memFree(textureBuffer);
-        threadPool.shutdown();
+        pageCache.shutdown();
     }
 
     private void draw() {
@@ -164,31 +133,18 @@ public class Renderer {
 
         GL30.glBindVertexArray(VAO);
 
-        int uploadsThisFrame = 0;
-        int maxUploads = 1;
-
         for (RenderPage page : pageManager.getVisiblePages(camera)) {
-            if (!page.loaded && page.future == null) {
-                page.future = CompletableFuture.supplyAsync(() ->
-                                pageManager.getDocument().renderPage(
-                                        page.getPage().getIndex(), 1.5f),
-                        threadPool
-                );
-            }
 
-            if (!page.loaded && page.future.isDone() && uploadsThisFrame < maxUploads) {
-                BufferedImage image = page.future.join();
-                page.texture = loadTexture(image);
-                page.loaded = true;
-                page.future = null;
+            Integer texture = pageCache.get(page);
 
-                uploadsThisFrame++;
-            }
-
-            if (!page.loaded) continue;
+            /* this is required because on first frame get() always returns null
+             * because page has just been queued and takes time for background thread to finish
+             */
+            if (texture == null)
+                continue;
 
             GL13.glActiveTexture(GL13.GL_TEXTURE0);
-            GL13.glBindTexture(GL11.GL_TEXTURE_2D, page.texture);
+            GL13.glBindTexture(GL11.GL_TEXTURE_2D, texture);
 
             float width = page.getPage().getWidth() * SCALE;
             float height = page.getPage().getHeight() * SCALE;
@@ -200,259 +156,36 @@ public class Renderer {
             shader.setMat4("model", model);
 
             GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, 6);
-
         }
-
     }
 
     private void input(long window) {
 
         // scroll
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W)
-                == GLFW.GLFW_PRESS) {
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS) {
             camera.y += 0.05f;
         }
 
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S)
-                == GLFW.GLFW_PRESS) {
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S) == GLFW.GLFW_PRESS) {
             camera.y -= 0.05f;
         }
 
         // zoom
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_UP)
-                == GLFW.GLFW_PRESS) {
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_UP) == GLFW.GLFW_PRESS) {
             camera.zoom += 0.01f;
         }
 
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_DOWN)
-                == GLFW.GLFW_PRESS) {
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_DOWN) == GLFW.GLFW_PRESS) {
             camera.zoom -= 0.01f;
         }
 
         // clamp zoom
-        camera.zoom = Math.max(0.2f,
-                Math.min(3.0f, camera.zoom));
+        camera.zoom = Math.max(0.2f, Math.min(3.0f, camera.zoom));
     }
-
-
-    private int loadTexture(String resourcePath) {
-
-        int texture = GL11.glGenTextures();
-
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture);
-
-        // Wrapping
-        GL11.glTexParameteri(
-                GL11.GL_TEXTURE_2D,
-                GL11.GL_TEXTURE_WRAP_S,
-                GL11.GL_REPEAT
-        );
-
-        GL11.glTexParameteri(
-                GL11.GL_TEXTURE_2D,
-                GL11.GL_TEXTURE_WRAP_T,
-                GL11.GL_REPEAT
-        );
-
-        // Filtering
-        GL11.glTexParameteri(
-                GL11.GL_TEXTURE_2D,
-                GL11.GL_TEXTURE_MIN_FILTER,
-                GL11.GL_NEAREST
-        );
-
-        GL11.glTexParameteri(
-                GL11.GL_TEXTURE_2D,
-                GL11.GL_TEXTURE_MAG_FILTER,
-                GL11.GL_NEAREST
-        );
-
-        try (
-                MemoryStack stack = MemoryStack.stackPush();
-                InputStream is =
-                        Renderer.class.getResourceAsStream(resourcePath)
-        ) {
-
-            if (is == null) {
-                throw new RuntimeException(
-                        "Texture resource not found: "
-                                + resourcePath
-                );
-            }
-
-            byte[] bytes = is.readAllBytes();
-
-            ByteBuffer imageBuffer =
-                    MemoryUtil.memAlloc(bytes.length);
-
-            imageBuffer.put(bytes);
-            imageBuffer.flip();
-
-            IntBuffer width = stack.mallocInt(1);
-            IntBuffer height = stack.mallocInt(1);
-            IntBuffer channels = stack.mallocInt(1);
-
-            STBImage.stbi_set_flip_vertically_on_load(true);
-
-            ByteBuffer data = STBImage.stbi_load_from_memory(
-                    imageBuffer,
-                    width,
-                    height,
-                    channels,
-                    0
-            );
-
-            MemoryUtil.memFree(imageBuffer);
-
-            if (data == null) {
-                throw new RuntimeException(
-                        "Failed to load texture: "
-                                + STBImage.stbi_failure_reason()
-                );
-            }
-
-            int format;
-
-            if (channels.get(0) == 3) {
-                format = GL11.GL_RGB;
-            } else if (channels.get(0) == 4) {
-                format = GL11.GL_RGBA;
-            } else {
-                throw new RuntimeException(
-                        "Unsupported image format"
-                );
-            }
-
-            GL11.glTexImage2D(
-                    GL11.GL_TEXTURE_2D,
-                    0,
-                    format,
-                    width.get(0),
-                    height.get(0),
-                    0,
-                    format,
-                    GL11.GL_UNSIGNED_BYTE,
-                    data
-            );
-
-            GL30.glGenerateMipmap(GL11.GL_TEXTURE_2D);
-
-            STBImage.stbi_image_free(data);
-
-        } catch (Exception e) {
-
-            throw new RuntimeException(
-                    "Failed to load texture resource: "
-                            + resourcePath,
-                    e
-            );
-        }
-
-        return texture;
-    }
-
-    // overloaded ( for now ) because we already have the image in BufferedImage
-    private int loadTexture(BufferedImage image) {
-
-        int width = image.getWidth();
-        int height = image.getHeight();
-
-        int[] pixels = new int[width * height];
-
-        image.getRGB(
-                0,
-                0,
-                width,
-                height,
-                pixels,
-                0,
-                width
-        );
-
-        int requiredSize = width * height * 4;
-
-        if (textureBuffer == null || textureBuffer.capacity() < requiredSize) {
-
-            if (textureBuffer != null) {
-                MemoryUtil.memFree(textureBuffer);
-            }
-
-            textureBuffer = MemoryUtil.memAlloc(requiredSize);
-
-        }
-        textureBuffer.clear();
-
-        ByteBuffer buffer = textureBuffer;
-
-        // Convert ARGB -> RGBA
-        for (int y = height - 1; y >= 0; y--) {
-
-            for (int x = 0; x < width; x++) {
-
-                int pixel =
-                        pixels[y * width + x];
-
-                buffer.put(
-                        (byte) ((pixel >> 16) & 0xFF)
-                ); // R
-
-                buffer.put(
-                        (byte) ((pixel >> 8) & 0xFF)
-                ); // G
-
-                buffer.put(
-                        (byte) (pixel & 0xFF)
-                ); // B
-
-                buffer.put(
-                        (byte) ((pixel >> 24) & 0xFF)
-                ); // A
-            }
-        }
-
-        buffer.flip();
-
-        int texture = GL11.glGenTextures();
-
-        GL11.glBindTexture(
-                GL11.GL_TEXTURE_2D,
-                texture
-        );
-
-        GL11.glTexParameteri(
-                GL11.GL_TEXTURE_2D,
-                GL11.GL_TEXTURE_MIN_FILTER,
-                GL11.GL_LINEAR
-        );
-
-        GL11.glTexParameteri(
-                GL11.GL_TEXTURE_2D,
-                GL11.GL_TEXTURE_MAG_FILTER,
-                GL11.GL_LINEAR
-        );
-
-        GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 1);
-        GL11.glTexImage2D(
-                GL11.GL_TEXTURE_2D,
-                0,
-                GL11.GL_RGBA8,
-                width,
-                height,
-                0,
-                GL11.GL_RGBA,
-                GL11.GL_UNSIGNED_BYTE,
-                buffer
-        );
-
-        return texture;
-    }
-
 
     // a VERY temporary solution to load PDFs other than the sample pdf (in resources/pdf/test.pdf)
     private File choosePDFFile() {
-        FileDialog dialog = new FileDialog(
-                (Frame) null, "Select a PDF File", FileDialog.LOAD
-        );
+        FileDialog dialog = new FileDialog((Frame) null, "Select a PDF File", FileDialog.LOAD);
 
         dialog.setFile("*.pdf");
         dialog.setVisible(true);
@@ -468,6 +201,5 @@ public class Renderer {
         return new File(directory, file);
 
     }
-
 
 }

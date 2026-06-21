@@ -9,13 +9,8 @@ public class RenderPage {
 
     private final PDFPage page;
 
-    public CompletableFuture<BufferedImage> future;
-
     public float x;
     public float y;
-
-    public int texture = -1;
-    public boolean loaded = false;
 
     public RenderPage(PDFPage page) {
         this.page = page;

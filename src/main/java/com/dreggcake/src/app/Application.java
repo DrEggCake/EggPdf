@@ -40,6 +40,10 @@ public class Application {
 
         GLFW.glfwSetFramebufferSizeCallback(win.window, (window, w, h) -> {
             GL11.glViewport(0, 0, w, h);
+
+            win.width = w;
+            win.height = h;
+            win.aspectRatio = (float) w /h;
         });
 
         renderer = new Renderer();

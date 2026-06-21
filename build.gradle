@@ -4,7 +4,27 @@ plugins {
 }
 
 project.ext.lwjglVersion = "3.4.1"
-project.ext.lwjglNatives = "natives-windows"
+
+import org.gradle.internal.os.OperatingSystem
+
+def os = OperatingSystem.current()
+def arch = System.getProperty("os.arch")
+
+def lwjglNatives
+
+if (os.isWindows()) {
+    lwjglNatives = "natives-windows"
+} else if (os.isLinux()) {
+    lwjglNatives = arch.startsWith("aarch64")
+            ? "natives-linux-arm64"
+            : "natives-linux"
+} else if (os.isMacOsX()) {
+    lwjglNatives = arch.startsWith("aarch64")
+            ? "natives-macos-arm64"
+            : "natives-macos"
+} else {
+    throw new GradleException("Unsupported OS: $os")
+}
 
 group = 'com.dreggcake.src'
 version = '1.0-SNAPSHOT'
