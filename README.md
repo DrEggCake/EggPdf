@@ -13,14 +13,17 @@ by taking advantage of GPU acceleration.
 - Basic OpenGL setup
 - Basic PDFBox setup
 - Basic navigation (Scrolling, Zooming)
-- Dyanmic PDF loading through temporary AWT File Dialog
+- Resizable window without affecting page aspect ratio
+- Dynamic PDF loading through temporary AWT File Dialog
 - Visible page loading (loaded pages are not erased from memory)
+- LRU cache to stop the ram exploding
 
 ### Planned
+- Tiling of pages to reduce rendering of pixels not in view (As in during zoom)
+- Variable DPI of pages (Should be low during scrolling and pages in cache but outside view)
 - A custom OpenGL-based UI
 - Annotations, search, selection, any other basic features
 - Multiple PDF support (via easy-to-use UI)
-- LRU cache to stop the ram exploding
 - Optimizations of the graphics pipeline
 
 ---
@@ -76,7 +79,6 @@ This project exists mainly for:
 ## Disclaimer
 
 Project is in its early stages and may not work as expected.
-Going fullscreen will stretch the pages right now.
 
 ---
 
