@@ -4,6 +4,7 @@ import com.dreggcake.src.app.Window;
 import com.dreggcake.src.pdf.core.PDFDocument;
 import com.dreggcake.src.pdf.core.PDFLoader;
 import com.dreggcake.src.pdf.core.PageManager;
+import com.dreggcake.src.renderer.cache.PageCache;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.*;
@@ -135,7 +136,7 @@ public class Renderer {
 
         for (RenderPage page : pageManager.getVisiblePages(camera)) {
 
-            Integer texture = pageCache.get(page);
+            Integer texture = pageCache.get(page, camera.zoom);
 
             /* this is required because on first frame get() always returns null
              * because page has just been queued and takes time for background thread to finish
