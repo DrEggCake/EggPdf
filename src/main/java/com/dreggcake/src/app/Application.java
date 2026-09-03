@@ -36,6 +36,15 @@ public class Application {
         GL.createCapabilities();
         GLFW.glfwSwapInterval(1);
 
+        // On Wayland (e.g. Hyprland) an unfocused window stops receiving frame
+        // callbacks, which makes glfwSwapBuffers block forever. If we never call
+        // glfwPollEvents, the compositor marks the app as "not responding" and
+        // offers to kill it. Disabling vsync while unfocused lets the loop keep
+        // polling events without blocking on a swap that never returns.
+        GLFW.glfwSetWindowFocusCallback(win.window, (window, focused) -> {
+            GLFW.glfwSwapInterval(focused ? 1 : 0);
+        });
+
         GL11.glViewport(0, 0, win.width, win.height);
 
         GLFW.glfwSetFramebufferSizeCallback(win.window, (window, w, h) -> {
