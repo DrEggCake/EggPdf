@@ -1,11 +1,11 @@
 package com.dreggcake.src.renderer.cache;
 
 import com.dreggcake.src.pdf.core.PageManager;
+import com.dreggcake.src.renderer.ReadyTexture;
 import com.dreggcake.src.renderer.RenderPage;
 import com.dreggcake.src.renderer.TextureLoader;
 import org.lwjgl.opengl.GL11;
 
-import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -31,7 +31,7 @@ public class PageCache {
                 }
             };
 
-    private final Map<CacheKey, CompletableFuture<BufferedImage>> pending =
+    private final Map<CacheKey, CompletableFuture<ReadyTexture>> pending =
             new HashMap<>();
 
     private final PageManager pageManager;
@@ -43,7 +43,7 @@ public class PageCache {
 
     /**
      * Returns the texture ID if available.
-     * Returns null if still rendering or not requested.
+     * Returns null if still rendering and no fallback exists.
      */
     public Integer get(RenderPage page, float zoom) {
 
@@ -52,12 +52,11 @@ public class PageCache {
 
         CacheKey key = new CacheKey(pageIndex, bucket);
 
-        // Exact texture already cached.
         Integer texture = textures.get(key);
         if (texture != null)
             return texture;
 
-        CompletableFuture<BufferedImage> future = pending.get(key);
+        CompletableFuture<ReadyTexture> future = pending.get(key);
 
         if (future == null) {
             request(page, zoom);
@@ -65,18 +64,13 @@ public class PageCache {
         }
 
         if (!future.isDone()) {
-            // use whatever texture is available till the correct resolution
-            // finishes rendering (prevents pages disappearing from screen for split second)
-            texture = findBestTexture(pageIndex);
-            return texture; // may be null if this page has never been rendered
+            return findBestTexture(pageIndex);
         }
 
-        // Rendering finished.
-        BufferedImage image = future.join();
+        ReadyTexture ready = future.join();
         pending.remove(key);
 
-        texture = TextureLoader.loadTexture(image);
-        image.flush();
+        texture = TextureLoader.uploadTexture(ready);
 
         textures.put(key, texture);
 
@@ -84,28 +78,26 @@ public class PageCache {
     }
 
     /**
-     * Begins rendering if not already cached.
+     * Begins rendering if not already cached or pending.
+     * PDF rendering + pixel conversion happens entirely off the GL thread.
      */
     public void request(RenderPage page, float zoom) {
 
         float bucket = getScaleBucket(zoom);
         CacheKey key = new CacheKey(page.getPage().getIndex(), bucket);
 
-        if (textures.containsKey(key))
-            return;
-
-        if (pending.containsKey(key))
+        if (textures.containsKey(key) || pending.containsKey(key))
             return;
 
         pending.put(
                 key,
-                CompletableFuture.supplyAsync(
-                        () -> pageManager.getDocument().renderPage(
-                                page.getPage().getIndex(),
-                                bucket / 2.0f
-                        ),
-                        threadPool
-                )
+                CompletableFuture.supplyAsync(() -> {
+                    var image = pageManager.getDocument().renderPage(
+                            page.getPage().getIndex(),
+                            bucket / 2.0f
+                    );
+                    return TextureLoader.convertToBuffer(image);
+                }, threadPool)
         );
     }
 
