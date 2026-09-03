@@ -9,6 +9,8 @@ import java.nio.IntBuffer;
 
 public class TextureLoader {
 
+    private static int placeholderTexture = -1;
+
     /**
      * Converts a BufferedImage to an RGBA ByteBuffer using bulk IntBuffer writes.
      * Must be called OFF the GL thread (background thread).
@@ -65,5 +67,36 @@ public class TextureLoader {
         MemoryUtil.memFree(ready.buffer());
 
         return texture;
+    }
+
+    /**
+     * Returns a 1x1 white placeholder texture for unrendered pages.
+     * Must be called on the GL thread.
+     */
+    public static int getPlaceholderTexture() {
+        if (placeholderTexture != -1)
+            return placeholderTexture;
+
+        ByteBuffer buf = MemoryUtil.memAlloc(4);
+        buf.put((byte) 0xFF)
+                .put((byte) 0xFF)
+                .put((byte) 0xFF)
+                .put((byte) 0xFF);
+        buf.flip();
+
+        placeholderTexture = GL11.glGenTextures();
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, placeholderTexture);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
+        GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 1);
+        GL11.glTexImage2D(
+                GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8,
+                1, 1, 0,
+                GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, buf
+        );
+
+        MemoryUtil.memFree(buf);
+
+        return placeholderTexture;
     }
 }

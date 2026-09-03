@@ -87,6 +87,9 @@ public class Renderer {
         shader.use();
         shader.setInt("tex", 0);
 
+        // 1x1 white texture used as a placeholder for pages that haven't rendered yet
+        TextureLoader.getPlaceholderTexture();
+
         // will be removed after basic ui is implemented
         File pdfFile = choosePDFFile();
         PDFDocument document;
@@ -138,11 +141,11 @@ public class Renderer {
 
             Integer texture = pageCache.get(page, camera.zoom);
 
-            /* this is required because on first frame get() always returns null
-             * because page has just been queued and takes time for background thread to finish
+            /* if the page hasn't rendered yet, draw a white placeholder rectangle
+             * of the correct size rather than showing a stale page or nothing
              */
             if (texture == null)
-                continue;
+                texture = TextureLoader.getPlaceholderTexture();
 
             GL13.glActiveTexture(GL13.GL_TEXTURE0);
             GL13.glBindTexture(GL11.GL_TEXTURE_2D, texture);
