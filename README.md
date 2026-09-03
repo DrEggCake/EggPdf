@@ -17,9 +17,10 @@ by taking advantage of GPU acceleration.
 - Dynamic PDF loading through temporary AWT File Dialog
 - Visible page loading (loaded pages are not erased from memory)
 - LRU cache to stop the ram exploding
+- Unrendered pages shown as a placeholder rectangle while they render
+- Textures rendered off the GL thread to avoid freezing the window during zoom
 
 ### Planned
-- Look into unrendered pages fucking up rendering, maybe replace unrendered pages with a basic rectangle rather than showing any rendered page
 - Tiling of pages to reduce rendering of pixels not in view (As in during zoom)
 - Variable DPI of pages (Should be low during scrolling and pages in cache but outside view)
 - A custom OpenGL-based UI
