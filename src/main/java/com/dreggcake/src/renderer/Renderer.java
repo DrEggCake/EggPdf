@@ -33,6 +33,9 @@ public class Renderer {
     int cores = Runtime.getRuntime().availableProcessors();
     ExecutorService threadPool = Executors.newFixedThreadPool(Math.max(1, cores - 1));
 
+    /** Set by external callbacks (e.g. window resize) to force the next redraw. */
+    public volatile boolean needsRender = true;
+
 
     public void start(Window win) {
 
@@ -109,18 +112,27 @@ public class Renderer {
 
     public void run(Window win) {
         while (!GLFW.glfwWindowShouldClose(win.window)) {
-            input(win.window);
 
-            // Every iteration to handle window resizes
-            projection.identity().ortho(
-                    -win.aspectRatio,
-                    win.aspectRatio,
-                    -1f, 1f,
-                    -1f, 1f);
+            boolean inputChanged = input(win.window);
 
-            draw();
+            if (pageCache.hasPendingUploads())
+                needsRender = true;
 
-            GLFW.glfwSwapBuffers(win.window);
+            if (inputChanged || needsRender) {
+
+                // Every iteration to handle window resizes
+                projection.identity().ortho(
+                        -win.aspectRatio,
+                        win.aspectRatio,
+                        -1f, 1f,
+                        -1f, 1f);
+
+                draw();
+
+                GLFW.glfwSwapBuffers(win.window);
+                needsRender = false;
+            }
+
             GLFW.glfwPollEvents();
         }
         pageCache.shutdown();
@@ -163,7 +175,11 @@ public class Renderer {
         }
     }
 
-    private void input(long window) {
+    private boolean input(long window) {
+
+        boolean changed = false;
+        float prevY = camera.y;
+        float prevZoom = camera.zoom;
 
         // scroll
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS) {
@@ -185,6 +201,11 @@ public class Renderer {
 
         // clamp zoom
         camera.zoom = Math.max(0.2f, Math.min(3.0f, camera.zoom));
+
+        if (camera.y != prevY || camera.zoom != prevZoom)
+            changed = true;
+
+        return changed;
     }
 
     // a VERY temporary solution to load PDFs other than the sample pdf (in resources/pdf/test.pdf)

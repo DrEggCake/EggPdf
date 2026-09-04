@@ -63,6 +63,9 @@ public class Application {
             win.width = w;
             win.height = h;
             win.aspectRatio = (float) w /h;
+
+            if (renderer != null)
+                renderer.needsRender = true;
         });
 
         renderer = new Renderer();

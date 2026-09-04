@@ -101,6 +101,19 @@ public class PageCache {
         );
     }
 
+    /**
+     * Whether any background render has finished converting to a GPU-ready
+     * buffer but hasn't been uploaded yet. Used to trigger a redraw so the
+     * finished texture gets picked up.
+     */
+    public boolean hasPendingUploads() {
+        for (CompletableFuture<ReadyTexture> future : pending.values()) {
+            if (future.isDone())
+                return true;
+        }
+        return false;
+    }
+
     public void clear() {
 
         for (Integer texture : textures.values())
