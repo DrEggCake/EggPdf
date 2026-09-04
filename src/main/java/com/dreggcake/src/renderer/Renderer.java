@@ -36,6 +36,10 @@ public class Renderer {
     /** Set by external callbacks (e.g. window resize) to force the next redraw. */
     public volatile boolean needsRender = true;
 
+    // Middle-button pan state
+    private boolean panning = false;
+    private double lastPanX, lastPanY;
+
 
     public void start(Window win) {
 
@@ -110,12 +114,18 @@ public class Renderer {
         pageCache = new PageCache(pageManager, threadPool);
 
         addScrollCallback(window.window);
+        addMouseCallbacks(window.window);
     }
 
     /**
-     * Trackpad / mouse-wheel support. A plain scroll moves vertically; a scroll
-     * with Ctrl held (or a two-finger pinch on many Wayland/X11 trackpads, which
-     * is reported with the Control modifier) zooms.
+     * Trackpad / mouse-wheel support.
+     *
+     * A plain two-finger scroll moves vertically; Ctrl+scroll zooms. A trackpad
+     * pinch is not reported with the Ctrl modifier on many Wayland/X11 setups,
+     * so it is instead detected by its signature: a single scroll event with an
+     * unusually large delta (a real pinch arrives as one big jump, while normal
+     * scrolling arrives as many small increments). Both are scaled
+     * multiplicatively so the zoom feels continuous.
      */
     private void addScrollCallback(long window) {
         GLFW.glfwSetScrollCallback(window, (win, xoffset, yoffset) -> {
@@ -123,14 +133,79 @@ public class Renderer {
                     GLFW.glfwGetKey(win, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
                     || GLFW.glfwGetKey(win, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
 
-            if (ctrlHeld) {
-                camera.zoom = Math.max(0.2f, Math.min(3.0f, camera.zoom + (float) yoffset * 0.05f));
+            boolean pinch = Math.abs(xoffset) > 3.0f || Math.abs(yoffset) > 3.0f;
+
+            if (ctrlHeld || pinch) {
+                float factor = (float) Math.pow(1.05, xoffset + yoffset);
+                camera.zoom = Math.max(0.2f, Math.min(3.0f, camera.zoom * factor));
             } else {
                 camera.y += (float) yoffset * 0.05f;
             }
 
             needsRender = true;
         });
+    }
+
+    /**
+     * Mouse input. Middle-button hold-and-drag pans the view so the content
+     * under the cursor follows it.
+     */
+    private void addMouseCallbacks(long window) {
+
+        GLFW.glfwSetMouseButtonCallback(window, (win, button, action, mods) -> {
+            if (button != GLFW.GLFW_MOUSE_BUTTON_MIDDLE)
+                return;
+
+            if (action == GLFW.GLFW_PRESS) {
+                double[] x = new double[1];
+                double[] y = new double[1];
+                GLFW.glfwGetCursorPos(win, x, y);
+
+                panning = true;
+                lastPanX = x[0];
+                lastPanY = y[0];
+                needsRender = true;
+            } else if (action == GLFW.GLFW_RELEASE) {
+                panning = false;
+            }
+        });
+
+        GLFW.glfwSetCursorPosCallback(window, (win, x, y) -> {
+            if (panning) {
+                pan(win, x, y);
+                needsRender = true;
+            }
+        });
+    }
+
+    /**
+     * Middle-button grab-and-drag pan. Moves the camera so that the content
+     * point under the cursor follows the cursor (screen pixels -> world space,
+     * scaled by 1/zoom so the view pans at the same speed as the content).
+     */
+    private void pan(long win, double px, double py) {
+
+        int[] w = new int[1];
+        int[] h = new int[1];
+        GLFW.glfwGetWindowSize(win, w, h);
+
+        if (w[0] <= 0 || h[0] <= 0)
+            return;
+
+        double dx = px - lastPanX;
+        double dy = py - lastPanY;
+        lastPanX = px;
+        lastPanY = py;
+
+        if (dx == 0 && dy == 0)
+            return;
+
+        float worldPerPixel = (float) (2.0 / (h[0] * camera.zoom));
+
+        camera.x -= (float) dx * worldPerPixel;
+        camera.y += (float) dy * worldPerPixel;
+
+        needsRender = true;
     }
 
     public void run(Window win) {

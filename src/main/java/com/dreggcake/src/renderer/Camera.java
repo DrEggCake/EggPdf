@@ -4,6 +4,7 @@ import org.joml.Matrix4f;
 
 public class Camera {
 
+    public float x = 0.0f;
     public float y = 0.0f;
     public float zoom = 1.0f;
 
@@ -11,6 +12,6 @@ public class Camera {
 
         return new Matrix4f()
                 .scale(zoom)
-                .translate(0, -y, 0);
+                .translate(-x, -y, 0);
     }
 }

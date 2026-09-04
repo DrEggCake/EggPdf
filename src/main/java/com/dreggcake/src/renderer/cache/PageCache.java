@@ -94,7 +94,7 @@ public class PageCache {
                 CompletableFuture.supplyAsync(() -> {
                     var image = pageManager.getDocument().renderPage(
                             page.getPage().getIndex(),
-                            bucket / 2.0f
+                            bucket
                     );
                     return TextureLoader.convertToBuffer(image);
                 }, threadPool)
