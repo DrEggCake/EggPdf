@@ -108,6 +108,29 @@ public class Renderer {
 
         pageManager = new PageManager(document);
         pageCache = new PageCache(pageManager, threadPool);
+
+        addScrollCallback(window.window);
+    }
+
+    /**
+     * Trackpad / mouse-wheel support. A plain scroll moves vertically; a scroll
+     * with Ctrl held (or a two-finger pinch on many Wayland/X11 trackpads, which
+     * is reported with the Control modifier) zooms.
+     */
+    private void addScrollCallback(long window) {
+        GLFW.glfwSetScrollCallback(window, (win, xoffset, yoffset) -> {
+            boolean ctrlHeld =
+                    GLFW.glfwGetKey(win, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
+                    || GLFW.glfwGetKey(win, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
+
+            if (ctrlHeld) {
+                camera.zoom = Math.max(0.2f, Math.min(3.0f, camera.zoom + (float) yoffset * 0.05f));
+            } else {
+                camera.y += (float) yoffset * 0.05f;
+            }
+
+            needsRender = true;
+        });
     }
 
     public void run(Window win) {
