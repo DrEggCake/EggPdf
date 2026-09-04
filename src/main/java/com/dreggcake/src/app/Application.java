@@ -21,9 +21,19 @@ public class Application {
 
         GLFWErrorCallback.createPrint(System.err).set();
 
+        // Force the X11 backend so OpenGL is created through GLX. This lets the
+        // PRIME offload env vars (__NV_PRIME_RENDER_OFFLOAD=1,
+        // __GLX_VENDOR_LIBRARY_NAME=nvidia, as used by prime-run) select the
+        // dedicated GPU. Under a Wayland session this runs via XWayland.
+        GLFW.glfwInitHint(GLFW.GLFW_PLATFORM, GLFW.GLFW_PLATFORM_X11);
+
         if (!GLFW.glfwInit()) {
             throw new IllegalStateException("Failed to initialize GLFW");
         }
+
+        // Explicitly route context creation through GLX (native API) so the
+        // GLX PRIME offload variables above actually take effect.
+        GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_CREATION_API, GLFW.GLFW_NATIVE_CONTEXT_API);
 
         GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MAJOR, 3);
         GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MINOR, 3);
